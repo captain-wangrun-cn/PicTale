@@ -94,7 +94,7 @@ function networkError() {
   if (location.protocol === 'file:') {
     return new AppError('页面是以文件方式打开的。请运行 node server.mjs，再用 http://127.0.0.1:5173 打开。');
   }
-  return new AppError('连不上本地服务。确认 node server.mjs 还在运行，然后刷新页面。');
+  return new AppError('连不上后端服务。本地开发请运行 node server.mjs；线上部署请刷新页面重试。');
 }
 
 /**

@@ -207,7 +207,7 @@ async function init() {
   renderAll();
 
   if (!state.serverOk) {
-    showToast('本地服务没有响应。请运行 node server.mjs，再用 http://127.0.0.1:5173 打开。', true, 8000);
+    showToast('后端服务没有响应。本地开发请运行 node server.mjs；线上部署请刷新页面重试。', true, 8000);
     return;
   }
   const storageErr = await checkStorage();
@@ -905,7 +905,7 @@ function renderConn() {
   const ready = hasApi(state.config);
   els.connBtn.classList.toggle('is-on', ready && state.serverOk);
   if (!state.serverOk) {
-    els.connText.textContent = '本地服务未运行';
+    els.connText.textContent = '服务未连接';
     els.connBtn.title = '请运行 node server.mjs';
   } else if (ready) {
     els.connText.textContent = `${state.config.chatModel} · 已配置`;
@@ -2410,7 +2410,7 @@ function bindEvents() {
   els.settingsBtn.addEventListener('click', openSettings);
   els.connBtn.addEventListener('click', () => {
     if (!state.serverOk) {
-      showToast('本地服务没有运行。在项目目录执行 node server.mjs，再打开 http://127.0.0.1:5173。', true, 8000);
+      showToast('后端服务没有响应。本地开发请运行 node server.mjs；线上部署请刷新页面重试。', true, 8000);
       return;
     }
     openSettings();
