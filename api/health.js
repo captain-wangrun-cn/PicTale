@@ -6,7 +6,7 @@ const CORS = {
   'access-control-max-age': '86400',
 };
 
-export default function handler() {
+export async function GET() {
   return new Response(JSON.stringify({ ok: true }), {
     status: 200,
     headers: {

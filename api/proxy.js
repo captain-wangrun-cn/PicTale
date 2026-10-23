@@ -29,7 +29,7 @@ function json(status, obj) {
 
 export const maxDuration = 300;
 
-export default async function handler(req) {
+export async function POST(req) {
   if (req.method === 'OPTIONS') {
     return new Response(null, { status: 204, headers: CORS });
   }
