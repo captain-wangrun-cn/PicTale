@@ -1,0 +1,116 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 750" width="1200" height="750">
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#07111a"/>
+      <stop offset="0.55" stop-color="#0f1f28"/>
+      <stop offset="1" stop-color="#17282e"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#ffd699" stop-opacity="0.6"/>
+      <stop offset="0.35" stop-color="#e8ab5b" stop-opacity="0.22"/>
+      <stop offset="1" stop-color="#e8ab5b" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="cone" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffd699" stop-opacity="0.26"/>
+      <stop offset="1" stop-color="#ffd699" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="ground" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#0b151a"/>
+      <stop offset="1" stop-color="#060c10"/>
+    </linearGradient>
+    <pattern id="rain" width="90" height="90" patternUnits="userSpaceOnUse" patternTransform="rotate(11)">
+      <line x1="12" y1="0" x2="12" y2="40" stroke="#bcd6e2" stroke-opacity="0.15" stroke-width="1.2"/>
+      <line x1="54" y1="22" x2="54" y2="66" stroke="#bcd6e2" stroke-opacity="0.11" stroke-width="1"/>
+      <line x1="78" y1="60" x2="78" y2="88" stroke="#bcd6e2" stroke-opacity="0.09" stroke-width="1"/>
+    </pattern>
+    <filter id="blur14"><feGaussianBlur stdDeviation="14"/></filter>
+    <filter id="blur6"><feGaussianBlur stdDeviation="6"/></filter>
+    <filter id="grain">
+      <feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="3" stitchTiles="stitch"/>
+      <feColorMatrix type="saturate" values="0"/>
+    </filter>
+    <radialGradient id="vig" cx="0.5" cy="0.48" r="0.72">
+      <stop offset="0.55" stop-color="#000" stop-opacity="0"/>
+      <stop offset="1" stop-color="#000" stop-opacity="0.55"/>
+    </radialGradient>
+  </defs>
+
+  <rect width="1200" height="750" fill="url(#sky)"/>
+
+  <!-- 远景楼群 -->
+  <g fill="#0a141a">
+    <rect x="-20" y="150" width="190" height="480"/>
+    <rect x="150" y="96" width="150" height="534"/>
+    <rect x="286" y="188" width="96" height="442"/>
+    <rect x="1010" y="120" width="210" height="510"/>
+    <rect x="940" y="196" width="90" height="434"/>
+  </g>
+  <g fill="#e9b96b" opacity="0.5">
+    <rect x="176" y="150" width="18" height="26"/>
+    <rect x="222" y="214" width="18" height="26"/>
+    <rect x="176" y="286" width="18" height="26"/>
+    <rect x="252" y="360" width="18" height="26"/>
+    <rect x="1052" y="168" width="16" height="24" opacity="0.7"/>
+    <rect x="1104" y="236" width="16" height="24"/>
+    <rect x="1052" y="318" width="16" height="24" opacity="0.4"/>
+    <rect x="966" y="260" width="14" height="22" opacity="0.55"/>
+  </g>
+
+  <!-- 那扇一直亮着的窗 -->
+  <ellipse cx="240" cy="222" rx="110" ry="90" fill="#e8b164" opacity="0.14" filter="url(#blur14)"/>
+  <rect x="205" y="184" width="70" height="76" fill="#f0c078" opacity="0.9"/>
+  <rect x="205" y="184" width="70" height="76" fill="none" stroke="#1a1309" stroke-width="5"/>
+  <line x1="240" y1="184" x2="240" y2="260" stroke="#1a1309" stroke-width="4"/>
+  <line x1="205" y1="222" x2="275" y2="222" stroke="#1a1309" stroke-width="4"/>
+
+  <!-- 路面 -->
+  <rect x="0" y="618" width="1200" height="132" fill="url(#ground)"/>
+  <path d="M0 620 H1200" stroke="#2a3d44" stroke-width="2" opacity="0.5"/>
+
+  <!-- 路灯光锥 -->
+  <ellipse cx="716" cy="182" rx="190" ry="150" fill="url(#glow)"/>
+  <path d="M700 200 L520 700 L960 700 L734 200 Z" fill="url(#cone)"/>
+  <ellipse cx="740" cy="690" rx="230" ry="26" fill="#e8ab5b" opacity="0.16" filter="url(#blur14)"/>
+
+  <!-- 路灯 -->
+  <rect x="796" y="168" width="7" height="500" fill="#1c2b31"/>
+  <path d="M800 174 H716" stroke="#1c2b31" stroke-width="7"/>
+  <path d="M692 176 h48 l-10 20 h-28 z" fill="#24343a"/>
+  <ellipse cx="716" cy="200" rx="13" ry="6" fill="#ffe0ac"/>
+
+  <!-- 站牌 -->
+  <rect x="985" y="236" width="7" height="430" fill="#1a2a30"/>
+  <rect x="916" y="228" width="140" height="172" rx="3" fill="#0d1a20" stroke="#2f434a" stroke-width="2"/>
+  <rect x="930" y="242" width="112" height="34" fill="#e8b164" opacity="0.14"/>
+  <text x="986" y="266" text-anchor="middle" font-family="Microsoft YaHei, PingFang SC, sans-serif" font-size="19" fill="#cfe0e6" letter-spacing="2">末班车</text>
+  <text x="986" y="322" text-anchor="middle" font-family="Consolas, monospace" font-size="34" fill="#f3c987">23:40</text>
+  <line x1="932" y1="344" x2="1040" y2="344" stroke="#2f434a" stroke-width="1"/>
+  <text x="986" y="370" text-anchor="middle" font-family="Consolas, monospace" font-size="15" fill="#7e979f" letter-spacing="3">17 路</text>
+
+  <!-- 撑伞的女人 -->
+  <ellipse cx="604" cy="702" rx="86" ry="14" fill="#000" opacity="0.45" filter="url(#blur6)"/>
+  <g>
+    <line x1="604" y1="212" x2="604" y2="432" stroke="#2b1b15" stroke-width="4"/>
+    <path d="M604 214 c-92 0 -160 62 -166 106 c52 -20 112 -30 166 -30 c54 0 114 10 166 30 c-6 -44 -74 -106 -166 -106 z" fill="#a8402b"/>
+    <path d="M604 214 c-92 0 -160 62 -166 106 c40 -34 102 -54 166 -54 z" fill="#bb4c33" opacity="0.55"/>
+    <path d="M452 316 q76 22 152 22 q76 0 152 -22" fill="none" stroke="#7d2c1c" stroke-width="3" opacity="0.7"/>
+    <circle cx="604" cy="212" r="6" fill="#2b1b15"/>
+    <circle cx="604" cy="424" r="27" fill="#141a1d"/>
+    <path d="M604 392 c-14 0 -26 10 -27 24 c10 -8 18 -11 27 -11 c9 0 17 3 27 11 c-1 -14 -13 -24 -27 -24 z" fill="#1d2429"/>
+    <path d="M573 448 h62 l12 172 h-86 z" fill="#232a2f"/>
+    <path d="M570 448 q34 -14 68 0 l-4 22 q-30 -10 -60 0 z" fill="#8f3524"/>
+    <path d="M627 462 l-20 -34" stroke="#232a2f" stroke-width="15" stroke-linecap="round"/>
+    <path d="M578 620 l-3 74 h13 l8 -74 z" fill="#161c20"/>
+    <path d="M604 620 l6 74 h13 l2 -74 z" fill="#161c20"/>
+    <path d="M570 694 h22 l3 9 h-28 z" fill="#0c1114"/>
+    <path d="M620 694 h22 l3 9 h-28 z" fill="#0c1114"/>
+    <path d="M573 520 q34 8 66 0" stroke="#151b1f" stroke-width="3" opacity="0.8" fill="none"/>
+  </g>
+
+  <!-- 雨与湿地面 -->
+  <rect width="1200" height="750" fill="url(#rain)"/>
+  <ellipse cx="604" cy="712" rx="120" ry="16" fill="#000" opacity="0.3" filter="url(#blur14)"/>
+  <ellipse cx="716" cy="712" rx="90" ry="10" fill="#e8ab5b" opacity="0.1" filter="url(#blur14)"/>
+  <rect width="1200" height="750" fill="url(#vig)"/>
+  <rect width="1200" height="750" filter="url(#grain)" opacity="0.06"/>
+</svg>

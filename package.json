@@ -1,0 +1,11 @@
+{
+  "name": "pictale",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "PicTale — 把图片里的细节，显影成一个故事",
+  "scripts": {
+    "start": "node server.mjs",
+    "test": "node --test tests/*.test.js"
+  }
+}

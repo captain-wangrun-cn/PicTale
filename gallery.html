@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>显影 · 画册 — 每个项目的图片与故事</title>
+  <meta name="description" content="所有已保存项目的图片与故事，按帧合并在一起展示。">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%231d1d1f'/%3E%3Crect x='8' y='8' width='16' height='16' rx='2' fill='none' stroke='%23ffffff' stroke-width='2'/%3E%3Ccircle cx='16' cy='16' r='3.5' fill='%23ffffff'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <div class="app">
+    <header class="topbar">
+      <div class="brand">
+        <span class="brand-mark" aria-hidden="true"></span>
+        <span class="brand-cn">显影</span>
+        <span class="brand-rule" aria-hidden="true"></span>
+        <span class="brand-en">GALLERY · 图与文的画册</span>
+      </div>
+      <div class="topbar-right">
+        <a class="btn-ghost btn-link" href="index.html">返回编辑</a>
+      </div>
+    </header>
+
+    <main class="gallery-body">
+      <aside class="gal-side" aria-label="项目列表">
+        <div class="gal-side-head">项目 <b id="galCount">0</b></div>
+        <ol class="gal-nav" id="galNav"></ol>
+      </aside>
+
+      <section class="gallery-main">
+        <div class="gal-pager">
+          <button class="btn-ghost" id="galPrev" type="button">← 上一个</button>
+          <span class="gal-pos" id="galPos"></span>
+          <button class="btn-ghost" id="galNext" type="button">下一个 →</button>
+        </div>
+        <div id="galView"></div>
+        <p class="gallery-empty" id="galleryEmpty" hidden>
+          还没有保存的项目。回到编辑页放入图片、生成故事后，这里就会出现它们。
+        </p>
+      </section>
+    </main>
+  </div>
+
+  <script type="module" src="js/gallery.js"></script>
+</body>
+</html>

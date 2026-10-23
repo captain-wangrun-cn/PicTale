@@ -1,0 +1,115 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 750" width="1200" height="750">
+  <defs>
+    <linearGradient id="wall" x1="0" y1="0" x2="0.3" y2="1">
+      <stop offset="0" stop-color="#241a10"/>
+      <stop offset="0.6" stop-color="#1c150f"/>
+      <stop offset="1" stop-color="#140f0b"/>
+    </linearGradient>
+    <radialGradient id="lampGlow" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#ffd08a" stop-opacity="0.55"/>
+      <stop offset="0.4" stop-color="#e8a75a" stop-opacity="0.18"/>
+      <stop offset="1" stop-color="#e8a75a" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="table" x1="0" y1="0" x2="0.2" y2="1">
+      <stop offset="0" stop-color="#4a3521"/>
+      <stop offset="0.5" stop-color="#3a2a1b"/>
+      <stop offset="1" stop-color="#2a1e13"/>
+    </linearGradient>
+    <linearGradient id="paperG" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#f2e9d5"/>
+      <stop offset="1" stop-color="#ded2b8"/>
+    </linearGradient>
+    <linearGradient id="envG" x1="0" y1="0" x2="0.4" y2="1">
+      <stop offset="0" stop-color="#e9ddc2"/>
+      <stop offset="1" stop-color="#cdbfa1"/>
+    </linearGradient>
+    <filter id="blur20"><feGaussianBlur stdDeviation="20"/></filter>
+    <filter id="blur8"><feGaussianBlur stdDeviation="8"/></filter>
+    <filter id="grain">
+      <feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="3" stitchTiles="stitch"/>
+      <feColorMatrix type="saturate" values="0"/>
+    </filter>
+    <radialGradient id="vig" cx="0.52" cy="0.5" r="0.75">
+      <stop offset="0.5" stop-color="#000" stop-opacity="0"/>
+      <stop offset="1" stop-color="#000" stop-opacity="0.62"/>
+    </radialGradient>
+  </defs>
+
+  <rect width="1200" height="750" fill="url(#wall)"/>
+  <rect width="1200" height="750" fill="url(#grain)" opacity="0.05"/>
+
+  <!-- 灯 -->
+  <ellipse cx="962" cy="128" rx="330" ry="290" fill="url(#lampGlow)"/>
+  <path d="M962 0 v78" stroke="#0e0a07" stroke-width="3"/>
+  <path d="M896 78 h132 l-26 62 h-80 z" fill="#3a2a1a"/>
+  <path d="M896 78 h132 l-6 12 h-120 z" fill="#57402a"/>
+  <ellipse cx="962" cy="146" rx="34" ry="16" fill="#ffdca2" opacity="0.9"/>
+  <ellipse cx="962" cy="152" rx="90" ry="52" fill="#ffcf8c" opacity="0.22" filter="url(#blur20)"/>
+
+  <!-- 桌面 -->
+  <rect x="0" y="436" width="1200" height="314" fill="url(#table)"/>
+  <path d="M0 438 H1200" stroke="#6b4f31" stroke-width="2" opacity="0.8"/>
+  <g stroke="#1f160e" stroke-width="1.5" opacity="0.25">
+    <path d="M0 486 q220 12 420 -2 q260 -16 480 4 q180 14 300 -4"/>
+    <path d="M0 566 q240 10 440 -6 q250 -18 500 2 q140 10 260 -6"/>
+    <path d="M0 668 q260 14 480 -2 q220 -16 440 2 q160 12 280 -2"/>
+  </g>
+  <ellipse cx="640" cy="560" rx="430" ry="180" fill="#ffc987" opacity="0.1" filter="url(#blur20)"/>
+
+  <!-- 信纸 -->
+  <g transform="rotate(-5 560 560)">
+    <rect x="330" y="452" width="430" height="252" fill="#000" opacity="0.35" filter="url(#blur8)"/>
+    <rect x="322" y="444" width="430" height="252" fill="url(#paperG)"/>
+    <g stroke="#b9ac92" stroke-width="2" opacity="0.75">
+      <line x1="366" y1="500" x2="706" y2="500"/>
+      <line x1="366" y1="540" x2="672" y2="540"/>
+      <line x1="366" y1="580" x2="690" y2="580"/>
+      <line x1="366" y1="620" x2="606" y2="620"/>
+    </g>
+    <path d="M366 470 h120" stroke="#8f8069" stroke-width="3"/>
+  </g>
+
+  <!-- 信封 -->
+  <g transform="rotate(-6 560 610)">
+    <rect x="356" y="486" width="396" height="236" rx="3" fill="#000" opacity="0.4" filter="url(#blur8)"/>
+    <rect x="348" y="478" width="396" height="236" rx="3" fill="url(#envG)"/>
+    <path d="M348 478 L546 596 L744 478" fill="none" stroke="#b2a284" stroke-width="3"/>
+    <path d="M348 714 L520 596 M744 714 L572 596" stroke="#b2a284" stroke-width="2" opacity="0.6"/>
+    <path d="M348 478 L546 560 L744 478 L744 470 L348 470 Z" fill="#d9cbaa" opacity="0.55"/>
+    <rect x="664" y="500" width="44" height="52" fill="#b0513a"/>
+    <rect x="670" y="506" width="32" height="40" fill="none" stroke="#8c3b28" stroke-width="1.5"/>
+    <path d="M676 522 h20 M676 530 h20" stroke="#8c3b28" stroke-width="2"/>
+    <g stroke="#8a7a5d" stroke-width="2.5" opacity="0.8">
+      <line x1="392" y1="586" x2="470" y2="586"/>
+      <line x1="392" y1="616" x2="500" y2="616"/>
+      <line x1="392" y1="646" x2="446" y2="646"/>
+    </g>
+  </g>
+
+  <!-- 钥匙 -->
+  <g transform="rotate(14 742 676)" fill="#b98a3f">
+    <circle cx="708" cy="676" r="15" fill="none" stroke="#b98a3f" stroke-width="7"/>
+    <rect x="722" y="672" width="58" height="8" rx="2"/>
+    <rect x="762" y="680" width="7" height="14"/>
+    <rect x="774" y="680" width="7" height="10"/>
+  </g>
+
+  <!-- 凉掉的茶 -->
+  <g>
+    <ellipse cx="884" cy="650" rx="96" ry="24" fill="#000" opacity="0.4" filter="url(#blur8)"/>
+    <ellipse cx="884" cy="640" rx="94" ry="22" fill="#d8ccb4"/>
+    <path d="M812 546 h144 l-12 92 q-60 12 -120 0 z" fill="#e6dbc5"/>
+    <path d="M812 546 h144 l-4 24 q-68 14 -136 0 z" fill="#cbbfa6"/>
+    <ellipse cx="884" cy="546" rx="72" ry="18" fill="#efe6d2"/>
+    <ellipse cx="884" cy="548" rx="60" ry="13" fill="#6b4526"/>
+    <ellipse cx="884" cy="546" rx="60" ry="13" fill="#7c512b" opacity="0.7"/>
+    <path d="M956 566 q34 -2 30 26 q-4 26 -34 20" fill="none" stroke="#e6dbc5" stroke-width="12"/>
+    <g fill="none" stroke="#f4ead8" stroke-width="3" opacity="0.28" stroke-linecap="round">
+      <path d="M860 520 q-12 -26 4 -48 q14 -20 2 -40"/>
+      <path d="M898 516 q-10 -22 4 -42 q12 -18 2 -34"/>
+    </g>
+  </g>
+
+  <rect width="1200" height="750" fill="url(#vig)"/>
+  <rect width="1200" height="750" filter="url(#grain)" opacity="0.055"/>
+</svg>

@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>显影 DEVELOP — 把图片里的细节，显影成一个故事</title>
+  <meta name="description" content="上传一组图片，识别画面细节，挑选要展开的重点，生成一个连贯的故事。">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%231d1d1f'/%3E%3Crect x='8' y='8' width='16' height='16' rx='2' fill='none' stroke='%23ffffff' stroke-width='2'/%3E%3Ccircle cx='16' cy='16' r='3.5' fill='%23ffffff'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <div class="app">
+    <header class="topbar">
+      <div class="brand">
+        <span class="brand-mark" aria-hidden="true"></span>
+        <span class="brand-cn">显影</span>
+        <span class="brand-rule" aria-hidden="true"></span>
+        <span class="brand-en">DEVELOP · IMAGE → STORY</span>
+      </div>
+      <div class="topbar-right">
+        <a class="btn-ghost btn-link" href="gallery.html" title="查看所有项目的图片与故事">画册</a>
+        <button class="proj-chip" id="projChip" type="button" title="管理项目">
+          <span class="proj-chip-name" id="projChipName">未命名项目</span>
+          <span class="proj-chip-caret" aria-hidden="true">▾</span>
+        </button>
+        <button class="btn-ghost" id="saveBtn" type="button" title="保存当前项目（Ctrl S）">保存</button>
+        <button class="conn" id="connBtn" type="button" title="打开 AI 连接设置">
+          <span class="conn-dot" id="connDot" aria-hidden="true"></span>
+          <span class="conn-text" id="connText">未连接</span>
+        </button>
+        <button class="btn-ghost" id="settingsBtn" type="button">设置</button>
+      </div>
+    </header>
+
+    <nav class="tabs" id="tabs" role="tablist" aria-label="切换视图">
+      <button class="tab is-active" type="button" role="tab" data-panel="stage" aria-selected="true">细节</button>
+      <button class="tab" type="button" role="tab" data-panel="sheet" aria-selected="false">故事</button>
+    </nav>
+
+    <main class="workspace" id="workspace">
+      <!-- 光台：图片 -->
+      <aside class="rail" aria-label="光台">
+        <div class="col-head">
+          <h2>光台</h2>
+          <span class="col-meta">LIGHT TABLE · <b id="frameCount">00</b></span>
+        </div>
+        <div class="rail-body">
+          <ol class="frames" id="frameList"></ol>
+          <label class="dropzone" id="dropzone" for="fileInput">
+            <input id="fileInput" type="file" accept="image/*" multiple hidden>
+            <span class="dz-plus" aria-hidden="true">＋</span>
+            <span class="dz-text">放入图片</span>
+            <span class="dz-hint">拖进来，或点击选择</span>
+          </label>
+        </div>
+        <div class="rail-foot">
+          <button class="link-btn" id="sampleBtn" type="button">载入示例</button>
+          <button class="link-btn" id="clearBtn" type="button">清空项目</button>
+        </div>
+        <p class="rail-note">识别不一定准，点开就能改。</p>
+      </aside>
+
+      <!-- 细节：当前帧与要素清单 -->
+      <section class="stage" id="stage" aria-label="细节">
+        <div class="col-head">
+          <h2>细节</h2>
+          <span class="col-meta">LEDGER · <b id="stageMeta">—</b></span>
+        </div>
+
+        <div class="viewer-pin" id="viewerPin">
+          <div class="viewer-empty" id="viewerEmpty">
+            <div class="ve-frame" aria-hidden="true"><span></span></div>
+            <p>选一帧，或者先放入图片</p>
+          </div>
+          <div class="viewer-frame" id="viewerFrame" hidden>
+            <div class="img-wrap" id="imgWrap">
+              <img id="stageImage" alt="">
+              <div class="boxes" id="boxes" aria-hidden="true"></div>
+              <button class="box-toggle" id="boxToggle" type="button" aria-pressed="true"
+                      title="显示或隐藏全部细节框">隐藏框</button>
+              <i class="cm cm-tl" aria-hidden="true"></i>
+              <i class="cm cm-tr" aria-hidden="true"></i>
+              <i class="cm cm-bl" aria-hidden="true"></i>
+              <i class="cm cm-br" aria-hidden="true"></i>
+            </div>
+          </div>
+        </div>
+        <div class="viewer" id="viewer">
+          <div class="viewer-note" id="viewerNote" hidden>
+            <label class="sr-only" for="frameNote">这一帧的补充说明</label>
+            <textarea id="frameNote" class="note-input" rows="3"
+                      placeholder="补充说明：人物是谁、时间、你想强调什么（可多行）"></textarea>
+          </div>
+          <p class="viewer-summary" id="stageSummary"></p>
+        </div>
+
+        <div class="ledger-tools">
+          <div class="ledger-actions">
+            <button class="btn-mini" id="extractOneBtn" type="button">识别这一帧</button>
+            <button class="btn-mini" id="extractAllBtn" type="button">识别全部</button>
+          </div>
+          <div class="filter-row" id="filterRow" role="group" aria-label="按类型筛选"></div>
+        </div>
+
+        <div class="meter" id="meter" hidden>
+          <div class="meter-bar" id="meterBar" aria-hidden="true"></div>
+          <p class="meter-legend" id="meterLegend"></p>
+        </div>
+
+        <ol class="details" id="detailList"></ol>
+        <div class="add-detail" id="addDetail"></div>
+      </section>
+
+      <!-- 故事 -->
+      <section class="sheet-col" id="sheet" aria-label="故事">
+        <div class="col-head">
+          <h2>故事</h2>
+          <span class="col-meta">STORY · <b id="wordCount">0</b> 字</span>
+        </div>
+
+        <div class="paper-scroll" id="paperScroll">
+          <div class="paper" id="paper">
+            <div class="paper-head">
+              <span class="paper-kicker" id="paperKicker">未显影</span>
+              <span class="paper-meta" id="paperMeta"></span>
+            </div>
+            <div class="paper-empty" id="paperEmpty">
+              <p class="pe-line">故事会在这里显影。</p>
+              <p class="pe-sub">从左边开始：放图、识别、挑重点、生成。</p>
+            </div>
+            <p class="story-stale" id="storyStale" role="status" hidden>图片顺序或数量改过了，原稿还在。重新生成全文后，再按图重写。</p>
+            <article class="story" id="story" aria-live="polite"></article>
+          </div>
+        </div>
+
+        <div class="composer">
+          <div class="mode-row" role="group" aria-label="创作方式">
+            <button class="mode" type="button" data-mode="faithful">忠实</button>
+            <button class="mode" type="button" data-mode="polish">润色</button>
+            <button class="mode" type="button" data-mode="free">自由</button>
+            <span class="mode-hint" id="modeHint"></span>
+          </div>
+          <div class="select-row writing-selects">
+            <label class="field"><span>视角</span>
+              <select id="povSelect">
+                <option value="third">第三人称</option>
+                <option value="first">第一人称</option>
+                <option value="narration">旁白</option>
+              </select>
+            </label>
+            <label class="field"><span>篇幅</span>
+              <select id="lengthSelect">
+                <option value="short">简短</option>
+                <option value="medium">适中</option>
+                <option value="long">详细</option>
+              </select>
+            </label>
+            <label class="field"><span>风格</span>
+              <select id="styleSelect" aria-describedby="styleHint">
+                <option value="natural">自然</option>
+                <option value="plain">直白</option>
+                <option value="artistic">艺术</option>
+                <option value="subtle">委婉</option>
+              </select>
+            </label>
+          </div>
+          <p class="prompt-hint" id="styleHint"></p>
+          <details class="prompt-more" id="promptMore">
+            <summary>自定义 Prompt <span>随项目保存</span></summary>
+            <div class="prompt-fields">
+              <label class="field"><span>预设</span>
+                <select id="presetSelect">
+                  <option value="default">默认创作</option>
+                  <option value="natural">自然表达</option>
+                  <option value="jailbreak">破限</option>
+                  <option value="custom" disabled hidden>自定义</option>
+                </select>
+              </label>
+              <label class="prompt-label" for="customPrompt">附加创作要求</label>
+              <textarea id="customPrompt" rows="4" spellcheck="false" aria-describedby="promptHelp" placeholder="例如：对话简短，用动作体现人物心理；保持雨夜场景与人物称呼一致。"></textarea>
+              <p class="prompt-hint" id="promptHelp">预设填进去可以改，以编辑框为准；只影响写作，不影响识别。留空用默认。</p>
+            </div>
+          </details>
+          <p class="prompt-hint">图片按顺序组成同一个故事，人物与情节会前后承接。</p>
+          <button class="cta" id="generateBtn" type="button">生成故事 <span class="cta-key">Ctrl ↵</span></button>
+          <div class="composer-foot">
+            <button class="link-btn" id="copyBtn" type="button" disabled>复制</button>
+            <button class="link-btn" id="exportBtn" type="button" disabled>导出 Markdown</button>
+            <button class="link-btn" id="clearStoryBtn" type="button" disabled>清除故事</button>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- 设置 -->
+  <dialog id="settings" class="settings" aria-labelledby="settingsTitle">
+    <form class="settings-form" id="settingsForm" method="dialog">
+      <header class="settings-head">
+        <h2 id="settingsTitle">连接 AI</h2>
+        <p>使用 OpenAI 兼容接口。请求经由本机的 <code>server.mjs</code> 转发，Key 只保存在这台电脑的浏览器里。</p>
+      </header>
+
+      <label class="sfield">
+        <span>接口地址</span>
+        <input id="cfgBase" type="url" autocomplete="off" spellcheck="false" placeholder="https://api.openai.com/v1">
+        <em>填到 <code>/v1</code> 为止即可，会自动补上 <code>/chat/completions</code>。</em>
+      </label>
+
+      <label class="sfield">
+        <span>API Key</span>
+        <input id="cfgKey" type="password" autocomplete="off" spellcheck="false" placeholder="sk-…">
+      </label>
+
+      <div class="sgrid">
+        <label class="sfield">
+          <span>写作模型</span>
+          <input id="cfgChat" type="text" autocomplete="off" spellcheck="false" placeholder="gpt-4o-mini">
+        </label>
+        <label class="sfield">
+          <span>视觉模型</span>
+          <input id="cfgVision" type="text" autocomplete="off" spellcheck="false" placeholder="留空则同写作模型">
+        </label>
+      </div>
+
+      <p class="shint">视觉模型必须能读图，例如 gpt-4o、qwen-vl-max、glm-4v，或走 OpenAI 兼容接口的 gemini-2.5-flash。</p>
+      <p class="sstatus" id="testStatus" role="status"></p>
+
+      <footer class="settings-foot">
+        <button class="btn-ghost" id="testBtn" type="button">测试连接</button>
+        <span class="spacer"></span>
+        <button class="btn-ghost" id="cancelCfg" type="button">取消</button>
+        <button class="cta cta-sm" id="saveCfg" type="submit">保存</button>
+      </footer>
+    </form>
+  </dialog>
+
+  <!-- 项目 -->
+  <dialog id="projectsDlg" class="settings" aria-labelledby="projectsTitle">
+    <div class="settings-form">
+      <header class="settings-head">
+        <h2 id="projectsTitle">项目</h2>
+        <p>项目保存在这台设备的浏览器里。改动会自动存入当前项目，打开页面时恢复最近的项目。</p>
+      </header>
+
+      <div class="project-actions">
+        <button class="btn-ghost" id="newProjectBtn" type="button">＋ 新建项目</button>
+        <button class="btn-ghost" id="dupProjectBtn" type="button">另存为副本…</button>
+      </div>
+
+      <ol class="project-list" id="projectList"></ol>
+
+      <footer class="settings-foot">
+        <p class="shint">当前项目已自动保存。</p>
+        <span class="spacer"></span>
+        <button class="btn-ghost" id="closeProjects" type="button">关闭</button>
+      </footer>
+    </div>
+  </dialog>
+
+  <!-- 项目命名 -->
+  <dialog id="nameDlg" class="settings" aria-labelledby="nameTitle">
+    <form class="settings-form" id="nameForm" method="dialog">
+      <header class="settings-head">
+        <h2 id="nameTitle">保存项目</h2>
+        <p>给这个项目起个名字，之后在顶部项目列表里打开。</p>
+      </header>
+      <label class="sfield">
+        <span>项目名称</span>
+        <input id="nameInput" maxlength="24" autocomplete="off" spellcheck="false" placeholder="例如：末班车之后">
+      </label>
+      <footer class="settings-foot">
+        <span class="spacer"></span>
+        <button class="btn-ghost" id="nameCancel" type="button">取消</button>
+        <button class="cta cta-sm" id="nameConfirm" type="submit">保存</button>
+      </footer>
+    </form>
+  </dialog>
+
+  <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>
