@@ -97,13 +97,17 @@ function networkError() {
   return new AppError('连不上后端服务。本地开发请运行 node server.mjs；线上部署请刷新页面重试。');
 }
 
-// —— 图片压缩：把大图压到请求体预算以内（Vercel 函数限制 4.5MB）——
+// —— 图片压缩：尽量无损地把图片压到请求体预算以内（Vercel 函数限制 4.5MB）——
+// 顺序：预算内原图直接放行；先试无损 WebP；再试不降分辨率的高质量 JPEG；
+// 只有仍然超预算才降低分辨率（视觉无损 → 更低）。
 
 const IMAGE_BUDGET_BYTES = 3 * 1024 * 1024;
-const COMPRESS_STEPS = [
-  { maxSide: 2048, quality: 0.85 },
-  { maxSide: 1536, quality: 0.75 },
-  { maxSide: 1024, quality: 0.7 },
+const ENCODE_STEPS = [
+  { maxSide: 4096, type: 'image/webp', quality: 1 },   // 无损
+  { maxSide: 4096, type: 'image/jpeg', quality: 0.9 }, // 视觉无损，保留全部分辨率
+  { maxSide: 2048, type: 'image/jpeg', quality: 0.85 },
+  { maxSide: 1536, type: 'image/jpeg', quality: 0.75 },
+  { maxSide: 1024, type: 'image/jpeg', quality: 0.7 },
 ];
 
 function dataUrlBytes(url) {
@@ -120,7 +124,7 @@ function loadImage(url) {
   });
 }
 
-async function compressDataUrl(url, { maxSide, quality }) {
+async function encodeDataUrl(url, { maxSide, type, quality }) {
   const img = await loadImage(url);
   const scale = Math.min(1, maxSide / Math.max(img.naturalWidth, img.naturalHeight));
   const w = Math.max(1, Math.round(img.naturalWidth * scale));
@@ -132,20 +136,25 @@ async function compressDataUrl(url, { maxSide, quality }) {
   ctx.fillStyle = '#ffffff';
   ctx.fillRect(0, 0, w, h);
   ctx.drawImage(img, 0, 0, w, h);
-  return canvas.toDataURL('image/jpeg', quality);
+  const encoded = canvas.toDataURL(type, quality);
+  // 不支持该编码格式的浏览器会退回 PNG，跳过避免白费
+  if (type !== 'image/jpeg' && !encoded.startsWith('data:' + type)) {
+    throw new Error('encoding not supported');
+  }
+  return encoded;
 }
 
 async function fitDataUrl(url) {
   if (typeof url !== 'string' || !url.startsWith('data:image/')) return url;
   if (dataUrlBytes(url) <= IMAGE_BUDGET_BYTES) return url;
   let smallest = url;
-  for (const step of COMPRESS_STEPS) {
+  for (const step of ENCODE_STEPS) {
     try {
-      const compressed = await compressDataUrl(url, step);
-      smallest = compressed;
-      if (dataUrlBytes(compressed) <= IMAGE_BUDGET_BYTES) return compressed;
+      const encoded = await encodeDataUrl(url, step);
+      if (dataUrlBytes(encoded) <= IMAGE_BUDGET_BYTES) return encoded;
+      if (dataUrlBytes(encoded) < dataUrlBytes(smallest)) smallest = encoded;
     } catch {
-      break;
+      continue;
     }
   }
   return smallest;
