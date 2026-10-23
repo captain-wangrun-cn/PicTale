@@ -97,6 +97,72 @@ function networkError() {
   return new AppError('连不上后端服务。本地开发请运行 node server.mjs；线上部署请刷新页面重试。');
 }
 
+// —— 图片压缩：把大图压到请求体预算以内（Vercel 函数限制 4.5MB）——
+
+const IMAGE_BUDGET_BYTES = 3 * 1024 * 1024;
+const COMPRESS_STEPS = [
+  { maxSide: 2048, quality: 0.85 },
+  { maxSide: 1536, quality: 0.75 },
+  { maxSide: 1024, quality: 0.7 },
+];
+
+function dataUrlBytes(url) {
+  const i = String(url).indexOf(',');
+  return i < 0 ? 0 : Math.floor((url.length - i - 1) * 3 / 4);
+}
+
+function loadImage(url) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.onerror = () => reject(new Error('图片解码失败'));
+    img.src = url;
+  });
+}
+
+async function compressDataUrl(url, { maxSide, quality }) {
+  const img = await loadImage(url);
+  const scale = Math.min(1, maxSide / Math.max(img.naturalWidth, img.naturalHeight));
+  const w = Math.max(1, Math.round(img.naturalWidth * scale));
+  const h = Math.max(1, Math.round(img.naturalHeight * scale));
+  const canvas = document.createElement('canvas');
+  canvas.width = w;
+  canvas.height = h;
+  const ctx = canvas.getContext('2d');
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0, 0, w, h);
+  ctx.drawImage(img, 0, 0, w, h);
+  return canvas.toDataURL('image/jpeg', quality);
+}
+
+async function fitDataUrl(url) {
+  if (typeof url !== 'string' || !url.startsWith('data:image/')) return url;
+  if (dataUrlBytes(url) <= IMAGE_BUDGET_BYTES) return url;
+  let smallest = url;
+  for (const step of COMPRESS_STEPS) {
+    try {
+      const compressed = await compressDataUrl(url, step);
+      smallest = compressed;
+      if (dataUrlBytes(compressed) <= IMAGE_BUDGET_BYTES) return compressed;
+    } catch {
+      break;
+    }
+  }
+  return smallest;
+}
+
+async function fitImages(messages) {
+  return Promise.all(messages.map(async (message) => {
+    if (!Array.isArray(message?.content)) return message;
+    const content = await Promise.all(message.content.map(async (part) => {
+      if (!part?.image_url?.url) return part;
+      const url = await fitDataUrl(part.image_url.url);
+      return url === part.image_url.url ? part : { ...part, image_url: { ...part.image_url, url } };
+    }));
+    return { ...message, content };
+  }));
+}
+
 /**
  * 调用 OpenAI 兼容的 /chat/completions。
  * 流式时通过 onDelta 增量回调，返回完整文本。
@@ -115,7 +181,7 @@ export async function chat({
   if (!config?.apiKey) throw new AppError('还没有填 API Key。点右上角「设置」。');
   if (!model) throw new AppError('还没有填模型名称。点右上角「设置」。');
 
-  const body = { model, messages, temperature };
+  const body = { model, messages: await fitImages(messages), temperature };
   if (maxTokens) body.max_tokens = maxTokens;
   if (stream) body.stream = true;
 
