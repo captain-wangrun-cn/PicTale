@@ -16,7 +16,7 @@
 const DEFAULTS = {
   AUTH_ORIGIN: 'https://auth.wris.me',
   QUOTA_MB: 512,
-  MAX_IMAGE_MB: 10,
+  MAX_IMAGE_MB: 20,
   MAX_PROJECT_KB: 2048,
 };
 

@@ -41,7 +41,7 @@ routes = [
 | 项 | 默认值 | 调整位置 |
 | --- | --- | --- |
 | 每用户总配额 | 512 MB | `QUOTA_MB` |
-| 单张图片上限 | 10 MB | `MAX_IMAGE_MB` |
+| 单张图片上限 | 20 MB | `MAX_IMAGE_MB` |
 | 项目 JSON 上限 | 2048 KB | `MAX_PROJECT_KB` |
 | 删除墓碑保留 | 90 天 | 代码里的 `TOMBSTONE_WINDOW` |
 

@@ -29,7 +29,7 @@ bucket_name = "wris-data"
 AUTH_ORIGIN = "https://auth.wris.me"
 # 每用户云端配额（MB）、单张图片上限（MB）、项目 JSON 上限（KB）
 QUOTA_MB = "512"
-MAX_IMAGE_MB = "10"
+MAX_IMAGE_MB = "20"
 MAX_PROJECT_KB = "2048"
 # 额外允许的跨域来源（逗号分隔）。*.wris.me 与 localhost 默认放行，一般留空即可。
 # ALLOWED_ORIGINS = "https://foo.example.com"
