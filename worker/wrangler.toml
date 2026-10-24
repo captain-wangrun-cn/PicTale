@@ -1,0 +1,35 @@
+# wris-data — Cloudflare Worker 配置
+# 部署步骤见 worker/README.md。
+
+name = "wris-data"
+main = "worker.js"
+compatibility_date = "2025-09-01"
+
+# 自定义域：会话 Cookie 种在 .wris.me，必须挂在同域下才能带上登录态
+# （routes 必须写在任何 [表] 段之前，否则会被当成 [vars] 里的变量）
+routes = [
+  { pattern = "api.wris.me", custom_domain = true }
+]
+
+# 部署前先创建并填入 database_id：
+#   npx wrangler d1 create wris-data
+[[d1_databases]]
+binding = "DB"
+database_name = "wris-data"
+database_id = "30d233de-6479-40e2-b37e-5b6bea9fb711"
+
+# 部署前先创建：
+#   npx wrangler r2 bucket create wris-data
+[[r2_buckets]]
+binding = "BUCKET"
+bucket_name = "wris-data"
+
+[vars]
+# 会话校验走 auth.wris.me（Cookie 种在 .wris.me，跨子域自动携带）
+AUTH_ORIGIN = "https://auth.wris.me"
+# 每用户云端配额（MB）、单张图片上限（MB）、项目 JSON 上限（KB）
+QUOTA_MB = "512"
+MAX_IMAGE_MB = "10"
+MAX_PROJECT_KB = "2048"
+# 额外允许的跨域来源（逗号分隔）。*.wris.me 与 localhost 默认放行，一般留空即可。
+# ALLOWED_ORIGINS = "https://foo.example.com"

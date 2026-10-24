@@ -1886,3 +1886,24 @@ ul.gal-story .story-list, .gal-story ul.story-list { list-style: disc; }
   .gal-row { grid-template-columns: 1fr; }
   .gal-project { padding: 18px 16px 24px; }
 }
+
+/* wris.me 账号（登录状态组件，index / gallery 共用） */
+.wris-user { display: flex; align-items: center; gap: 7px; height: 30px; padding: 0; border: 1px solid transparent; border-radius: 999px; font-size: 12px; color: var(--text-2); }
+.wris-user .wris-avatar { width: 20px; height: 20px; border-radius: 50%; flex: none; object-fit: cover; }
+.wris-user .wris-name { max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.wris-user .wris-out { color: var(--muted); text-decoration: none; }
+.wris-user .wris-out:hover { color: var(--text); }
+.wris-user .wris-login { display: inline-flex; align-items: center; height: 30px; padding: 0 12px; border: 1px solid var(--border); border-radius: 999px; color: var(--text-2); text-decoration: none; transition: border-color 0.2s, color 0.2s, background 0.2s; }
+.wris-user .wris-login:hover { border-color: var(--border-strong); color: var(--text); background: var(--accent-soft); }
+
+
+/* 云端同步状态（项目对话框头部） */
+.settings-head p.cloud-state {
+  margin-top: 2px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.settings-head p.cloud-state.is-err {
+  color: #c2403a;
+}

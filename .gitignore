@@ -2,3 +2,10 @@ node_modules/
 .vercel/
 .claude/
 .DS_Store
+
+.vercel
+.env*
+
+# wrangler 本地缓存与产物
+.wrangler/
+dist/

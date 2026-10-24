@@ -46,6 +46,17 @@ import {
   renameProject,
   saveProject,
 } from './store.js';
+import { fetchWrisUser } from './wris-auth.js';
+import {
+  attachUser,
+  cloudSnapshot,
+  deleteRemote,
+  flushPushes,
+  noteDelete,
+  onCloudState,
+  queuePush,
+  syncAll,
+} from './cloud.js';
 
 /* ------------------------------------------------------------------ */
 /* helpers                                                             */
@@ -178,6 +189,8 @@ const els = {
   nameCancel: $('#nameCancel'),
   nameConfirm: $('#nameConfirm'),
 
+  cloudState: $('#cloudState'),
+
   tabs: $('#tabs'),
   workspace: $('#workspace'),
   stage: $('#stage'),
@@ -208,12 +221,14 @@ async function init() {
 
   if (!state.serverOk) {
     showToast('后端服务没有响应。本地开发请运行 node server.mjs；线上部署请刷新页面重试。', true, 8000);
+    initCloud(); // 云端同步只依赖账号服务，不依赖本站后端
     return;
   }
   const storageErr = await checkStorage();
   if (storageErr) {
     showToast(`浏览器存档不可用：${storageErr}`, true, 9000);
   }
+  initCloud();
 }
 
 function restore(saved) {
@@ -323,6 +338,7 @@ function persist() {
 
 async function flushProject() {
   ui.saveTimer = null;
+  cloudDirty = true;
   if (!state.projectId) {
     // 工作区第一次有内容时，自动建一个项目档案
     if (!state.frames.length && !(state.story.raw || '').trim() &&
@@ -350,8 +366,63 @@ async function flushProject() {
   if (ok) {
     ls.set(LAST_KEY, state.projectId);
     if (els.projectsDlg.open) renderProjectList();
+    queuePush(state.projectId); // 已登录时防抖推送云端；未登录内部直接跳过
   }
   return ok;
+}
+
+/* ------------------------------------------------------------------ */
+/* cloud sync                                                          */
+/* ------------------------------------------------------------------ */
+
+// 本次会话是否动过当前项目：没动过时，启动同步拉到的新版本可以直接套用
+let cloudDirty = false;
+
+async function initCloud() {
+  const user = await fetchWrisUser();
+  attachUser(user);
+  onCloudState(renderCloudState);
+  renderCloudState(cloudSnapshot());
+  if (!user) return;
+
+  const summary = await syncAll();
+  if (!summary.ok) {
+    showToast(`云端同步失败：${summary.error}`, true, 6000);
+    return;
+  }
+
+  // 当前项目被拉成了新版本、且这次会话还没编辑过，直接套用云端内容
+  if (state.projectId && summary.pulledIds.includes(state.projectId) && !cloudDirty) {
+    const rec = await getProject(state.projectId);
+    if (rec) {
+      applyProject(state.projectId, rec);
+      renderAll();
+    }
+  }
+  if (els.projectsDlg.open) renderProjectList();
+  if (summary.pulled) {
+    showToast(`已从云端同步 ${summary.pulled} 个项目。`);
+  } else if (summary.removed) {
+    showToast(`云端删除已同步（${summary.removed} 个项目）。`);
+  }
+}
+
+function renderCloudState(cs) {
+  const el = els.cloudState;
+  if (!el) return;
+  if (cs.status === 'off') {
+    el.textContent = '未登录 · 项目只保存在本机浏览器';
+    el.className = 'cloud-state';
+  } else if (cs.status === 'syncing') {
+    el.textContent = '正在与账号云端同步…';
+    el.className = 'cloud-state';
+  } else if (cs.status === 'ok') {
+    el.textContent = cs.at ? `已同步到账号云端 · ${fmtTime(cs.at)}` : '已同步到账号云端';
+    el.className = 'cloud-state is-ok';
+  } else {
+    el.textContent = `云端同步失败：${cs.message || '未知错误'}`;
+    el.className = 'cloud-state is-err';
+  }
 }
 
 /* ------------------------------------------------------------------ */
@@ -1718,6 +1789,9 @@ async function removeProject(id, name) {
     showToast('删除失败。', true);
     return;
   }
+  // 先记墓碑再尝试推送：就算这次没推到云端，下次同步也会重放这条删除
+  noteDelete(id);
+  deleteRemote(id);
   if (id === state.projectId) {
     // 桌面上的内容保留，之后的改动会存成一个新项目
     state.projectId = null;
@@ -2480,6 +2554,7 @@ function bindEvents() {
           state.projectNamed = true;
           renderProjectBar();
         }
+        if (ok) queuePush(target);
         if (els.projectsDlg.open) renderProjectList();
         showToast(ok ? '已重命名。' : '重命名失败。', !ok);
       });
@@ -2530,7 +2605,7 @@ function bindEvents() {
     }
   });
 
-  /* 离开前尽量保存 */
+  /* 离开前尽量保存；推送不出去也没关系，下次启动的合并会补上 */
   window.addEventListener('pagehide', () => {
     if (ui.saveTimer) {
       clearTimeout(ui.saveTimer);
@@ -2539,6 +2614,7 @@ function bindEvents() {
     if (!state.projectId && !hasContent() &&
         JSON.stringify(state.settings) === JSON.stringify(DEFAULT_SETTINGS)) return;
     flushProject();
+    flushPushes();
   });
 }
 

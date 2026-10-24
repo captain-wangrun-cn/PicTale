@@ -5,6 +5,8 @@
 import { getProject, listProjects } from './store.js';
 import { injectAnchors, parseStory } from './story-format.js';
 import { mdToHtml } from './markdown.js';
+import { attachUser, syncAll } from './cloud.js';
+import { fetchWrisUser } from './wris-auth.js';
 
 const pad = (n) => String(n).padStart(2, '0');
 
@@ -176,15 +178,21 @@ async function init() {
   const list = await listProjects();
   metas.push(...list);
   buildNav();
+  bindNav();
 
   if (!metas.length) {
     emptyEl.hidden = false;
     posEl.textContent = '';
     prevBtn.disabled = true;
     nextBtn.disabled = true;
-    return;
+  } else {
+    await show(0);
   }
 
+  syncFromCloud();
+}
+
+function bindNav() {
   navEl.addEventListener('click', (e) => {
     const li = e.target.closest('.gal-item');
     if (li) show(Number(li.dataset.index));
@@ -201,8 +209,25 @@ async function init() {
       show(current - 1);
     }
   });
+}
 
-  await show(0);
+// 云端同步：登录用户的项目拉进本地存档后刷新列表；失败不影响本地画册
+async function syncFromCloud() {
+  try {
+    const user = await fetchWrisUser();
+    if (!user) return;
+    attachUser(user);
+    const summary = await syncAll();
+    if (!summary.ok || !(summary.pulled || summary.removed)) return;
+    metas.length = 0;
+    metas.push(...(await listProjects()));
+    cache.clear();
+    buildNav();
+    emptyEl.hidden = metas.length > 0;
+    await show(Math.min(current, Math.max(0, metas.length - 1)));
+  } catch {
+    /* 云端不可用时保持本地列表 */
+  }
 }
 
 init();

@@ -68,8 +68,17 @@ node server.mjs
 ## 数据与隐私
 
 - 项目存在浏览器的 IndexedDB 里，按项目分开保存，刷新或关掉页面不会丢；「清空项目」只清空当前项目的内容。
-- API Key 存在 localStorage，只在你配置的接口地址上使用。
+- API Key 存在 localStorage，只在你配置的接口地址上使用，**不会上传云端**（见下）。
 - `server.mjs` 默认监听 `0.0.0.0`，局域网内其他设备也能访问；不需要时用 `HOST=127.0.0.1 node server.mjs` 只监听本机。
+
+## 账号云端同步
+
+登录 wris.me 账号（右上角，GitHub 授权）后，项目会和账号云端双向同步：
+
+- 帧图按内容哈希上传到 Cloudflare R2，项目数据（不含图片本体）存 D1，由一个 Cloudflare Worker 提供 API，部署步骤见 [`worker/README.md`](worker/README.md)。
+- 打开页面时做一次双向合并：`updatedAt` 新者胜；删除用墓碑在多台设备间收敛。编辑过程中改动会防抖推送到云端。
+- 未登录时一切照旧，只保存在本机浏览器。
+- **AI 接口配置（接口地址 / API Key）不参与云端同步**，每台设备各自填写。
 
 ## 文件结构
 
@@ -80,7 +89,10 @@ js/app.js           状态、渲染与交互
 js/api.js           OpenAI 兼容接口调用（含流式）
 js/prompts.js       创作设置与识别 / 写作 / 重写 / 跨图线索提示词
 js/story-format.js  故事解析、干净导出、连续时间线与重写上下文
-js/store.js         IndexedDB 多项目存档
+js/store.js         IndexedDB 多项目存档（本地工作副本）
+js/cloud.js         账号云端同步（打包 / 合并 / 推送拉取）
+js/wris-auth.js     wris.me 登录态组件
+worker/             账号云端 API（Cloudflare Worker + D1 + R2）
 server.mjs          静态服务 + AI 请求转发
 samples/            示例图片
 ```
