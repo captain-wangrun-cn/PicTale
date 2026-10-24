@@ -485,10 +485,15 @@ a { color: inherit; }
 
 .boxes { position: absolute; inset: 0; pointer-events: none; }
 
-/* 全部框常显:非选中框弱化、不带白幕,选中的加粗并带标签 */
+/* 全部框常显:非选中框弱化、不带白幕,选中的加粗、带标签并保留白幕聚焦 */
 .boxes.is-show-all .box { opacity: 0.5; box-shadow: none; }
 .boxes.is-show-all .box .box-label { display: none; }
-.boxes.is-show-all .box.is-on { opacity: 1; border-width: 2.5px; }
+.boxes.is-show-all .box.is-on {
+  opacity: 1;
+  border-width: 2.5px;
+  z-index: 1;
+  box-shadow: 0 0 0 9999px rgba(255, 255, 255, 0.5);
+}
 .boxes.is-show-all .box.is-on .box-label { display: block; }
 
 .box-toggle {

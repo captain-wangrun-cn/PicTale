@@ -1591,11 +1591,13 @@ function rebuildProviderOptions({ chatId, visionId } = {}) {
   const prevChat = chatId ?? els.cfgChatProvider.value;
   const prevVision = visionId ?? els.cfgVisionProvider.value;
   els.cfgChatProvider.innerHTML = options || '<option value="">（先添加供应商）</option>';
-  els.cfgVisionProvider.innerHTML = '<option value="">同写作模型</option>' + options;
+  els.cfgVisionProvider.innerHTML = options || '<option value="">（先添加供应商）</option>';
 
   const ids = rows.map((r) => r.dataset.id);
-  els.cfgChatProvider.value = ids.includes(prevChat) ? prevChat : ids[0] || '';
-  els.cfgVisionProvider.value = ids.includes(prevVision) ? prevVision : '';
+  const pick = (prev, fallback) => (ids.includes(prev) ? prev : fallback);
+  els.cfgChatProvider.value = pick(prevChat, ids[0] || '');
+  // 视觉模型没有「同写作模型」空选项：没选过就默认跟写作模型同一家
+  els.cfgVisionProvider.value = pick(prevVision, pick(prevChat, ids[0] || ''));
 }
 
 function openSettings() {
