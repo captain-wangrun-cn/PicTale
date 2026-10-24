@@ -32,8 +32,8 @@ function backTo() {
   return encodeURIComponent(location.origin + location.pathname);
 }
 
-export function loginUrl() {
-  return `${AUTH_ORIGIN}/api/login?provider=github&redirect_to=${backTo()}`;
+export function loginUrl(provider = 'github') {
+  return `${AUTH_ORIGIN}/api/login?provider=${provider}&redirect_to=${backTo()}`;
 }
 
 export function logoutUrl() {
@@ -49,7 +49,9 @@ function render(mount, user) {
     mount.innerHTML = `${avatar}<span class="wris-name">${name}</span><a class="wris-out" href="${logoutUrl()}" title="退出登录">退出</a>`;
     mount.classList.add('is-in');
   } else {
-    mount.innerHTML = `<a class="wris-login" href="${loginUrl()}">登录</a>`;
+    mount.innerHTML =
+      `<a class="wris-login" href="${loginUrl('github')}" title="使用 GitHub 账号登录">GitHub 登录</a>` +
+      `<a class="wris-login" href="${loginUrl('google')}" title="使用 Google 账号登录">Google 登录</a>`;
     mount.classList.add('is-out');
   }
 }
