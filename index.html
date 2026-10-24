@@ -199,31 +199,37 @@
     <form class="settings-form" id="settingsForm" method="dialog">
       <header class="settings-head">
         <h2 id="settingsTitle">连接 AI</h2>
-        <p>使用 OpenAI 兼容接口。请求经由本机的 <code>server.mjs</code> 转发，Key 只保存在这台电脑的浏览器里。</p>
+        <p>使用 OpenAI 兼容接口，可配置多个供应商。写作与视觉模型分别指定用哪一家的哪个模型。请求经由本机的 <code>server.mjs</code> 转发，Key 只保存在这台电脑的浏览器里。</p>
       </header>
 
-      <label class="sfield">
-        <span>接口地址</span>
-        <input id="cfgBase" type="url" autocomplete="off" spellcheck="false" placeholder="https://api.openai.com/v1">
-        <em>填到 <code>/v1</code> 为止即可，会自动补上 <code>/chat/completions</code>。</em>
-      </label>
-
-      <label class="sfield">
-        <span>API Key</span>
-        <input id="cfgKey" type="password" autocomplete="off" spellcheck="false" placeholder="sk-…">
-      </label>
+      <div class="sfield">
+        <span>供应商</span>
+        <div class="provider-list" id="cfgProviders"></div>
+        <button class="link-btn" id="cfgAddProvider" type="button">＋ 添加供应商</button>
+      </div>
 
       <div class="sgrid">
         <label class="sfield">
           <span>写作模型</span>
-          <input id="cfgChat" type="text" autocomplete="off" spellcheck="false" placeholder="gpt-4o-mini">
+          <span class="model-pick">
+            <select id="cfgChatProvider" aria-label="写作模型的供应商"></select>
+            <input id="cfgChat" type="text" autocomplete="off" spellcheck="false" placeholder="模型名，如 gpt-4o-mini">
+          </span>
         </label>
         <label class="sfield">
           <span>视觉模型</span>
-          <input id="cfgVision" type="text" autocomplete="off" spellcheck="false" placeholder="留空则同写作模型">
+          <span class="model-pick">
+            <select id="cfgVisionProvider" aria-label="视觉模型的供应商"></select>
+            <input id="cfgVision" type="text" autocomplete="off" spellcheck="false" placeholder="留空则同写作模型">
+          </span>
         </label>
       </div>
 
+      <label class="scheck">
+        <input id="cfgStoryImages" type="checkbox">
+        <span>写作时把原图传给模型</span>
+      </label>
+      <p class="shint">勾选后，生成与重写会把各帧原图连同细节清单一起发给写作模型，帮助它看图写作；写作模型必须自己支持读图（如 gpt-4o、gemini-2.5-flash、glm-4v），否则请求会被拒绝。图多时会自动压缩。</p>
       <p class="shint">视觉模型必须能读图，例如 gpt-4o、qwen-vl-max、glm-4v，或走 OpenAI 兼容接口的 gemini-2.5-flash。</p>
       <p class="sstatus" id="testStatus" role="status"></p>
 

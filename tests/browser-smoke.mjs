@@ -685,8 +685,10 @@ test('真实浏览器冒烟：示例 / 风格 / Prompt / 生成 / 重写 / 项�
     await t.test('设置弹窗保存 dummy 配置（本地 mock URL / dummy key）', async () => {
       await click('#settingsBtn');
       await waitFor(`document.querySelector('#settings').open === true`);
-      await setValue('#cfgBase', mock.base);
-      await setValue('#cfgKey', 'sk-dummy-smoke');
+      await click('#cfgAddProvider');
+      await waitFor(`document.querySelectorAll('#cfgProviders .provider-row').length === 1`);
+      await setValue('#cfgProviders .provider-row .pr-base', mock.base);
+      await setValue('#cfgProviders .provider-row .pr-key', 'sk-dummy-smoke');
       await setValue('#cfgChat', 'mock-chat');
       await setValue('#cfgVision', 'mock-vision');
       await shot('02-settings');
@@ -694,8 +696,12 @@ test('真实浏览器冒烟：示例 / 风格 / Prompt / 生成 / 重写 / 项�
       await waitFor(`document.querySelector('#settings').open === false`);
       await waitFor(`document.querySelector('#connText').textContent.includes('已配置')`);
       const cfg = await evalJS(`JSON.parse(localStorage.getItem('develop.config.v1'))`);
-      assert.equal(cfg.baseUrl, mock.base);
-      assert.equal(cfg.apiKey, 'sk-dummy-smoke');
+      assert.equal(cfg.providers.length, 1);
+      assert.equal(cfg.providers[0].baseUrl, mock.base);
+      assert.equal(cfg.providers[0].apiKey, 'sk-dummy-smoke');
+      assert.equal(cfg.chatModel.model, 'mock-chat');
+      assert.equal(cfg.visionModel.model, 'mock-vision');
+      assert.equal(cfg.chatModel.providerId, cfg.providers[0].id);
     });
 
     await t.test('生成：Fetch 捕获完整 messages，流式渲染 F01–F03，生成中控件禁用', async () => {
@@ -866,7 +872,7 @@ test('真实浏览器冒烟：示例 / 风格 / Prompt / 生成 / 重写 / 项�
         timeout: 5000,
         label: 'stale 提醒',
       });
-      assert.match(await evalJS(`document.querySelector('#storyStale').textContent`), /原稿已保留/);
+      assert.match(await evalJS(`document.querySelector('#storyStale').textContent`), /原稿还在/);
       assert.equal(await evalJS(`document.querySelectorAll('#story .story-sec').length`), 3);
       assert.equal(await evalJS(`document.querySelector('#story').textContent`), rawBefore);
       assert.equal(

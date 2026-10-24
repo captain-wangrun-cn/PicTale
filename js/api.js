@@ -3,10 +3,10 @@
 const CONFIG_KEY = 'develop.config.v1';
 
 export const EMPTY_CONFIG = {
-  baseUrl: '',
-  apiKey: '',
-  chatModel: '',
-  visionModel: '',
+  providers: [],
+  chatModel: { providerId: '', model: '' },   // 写作模型：用哪个供应商的哪个模型
+  visionModel: { providerId: '', model: '' }, // 视觉模型：留空则回退写作模型
+  storyImages: false,                         // 写作时是否把原图传给写作模型
 };
 
 export class AppError extends Error {
@@ -16,11 +16,67 @@ export class AppError extends Error {
   }
 }
 
+export function providerId() {
+  return 'p-' + Math.random().toString(36).slice(2, 10);
+}
+
+function normalizeProvider(p, i) {
+  return {
+    id: typeof p?.id === 'string' && p.id ? p.id : providerId(),
+    name: String(p?.name || '').trim().slice(0, 30) || `供应商 ${i + 1}`,
+    baseUrl: String(p?.baseUrl || '').trim(),
+    apiKey: String(p?.apiKey || '').trim(),
+  };
+}
+
+function normalizeSelection(sel) {
+  return {
+    providerId: String(sel?.providerId || '').trim(),
+    model: String(sel?.model || '').trim(),
+  };
+}
+
+// 旧版单供应商配置（baseUrl/apiKey/chatModel 为字符串）迁移为多供应商结构
+function migrateLegacy(raw) {
+  const providers = [];
+  if (raw?.baseUrl || raw?.apiKey) {
+    let name = '';
+    try {
+      name = new URL(raw.baseUrl).hostname;
+    } catch {
+      name = '';
+    }
+    providers.push(normalizeProvider({ name, baseUrl: raw.baseUrl, apiKey: raw.apiKey }, 0));
+  }
+  return {
+    providers,
+    chatModel: { providerId: providers[0]?.id || '', model: String(raw?.chatModel || '').trim() },
+    visionModel: raw?.visionModel
+      ? { providerId: providers[0]?.id || '', model: String(raw.visionModel).trim() }
+      : { providerId: '', model: '' },
+    storyImages: false,
+  };
+}
+
+function normalizeConfig(raw) {
+  if (Array.isArray(raw?.providers)) {
+    return {
+      providers: raw.providers.map(normalizeProvider),
+      chatModel: normalizeSelection(raw.chatModel),
+      visionModel: normalizeSelection(raw.visionModel),
+      storyImages: Boolean(raw.storyImages),
+    };
+  }
+  return migrateLegacy(raw);
+}
+
+export { normalizeConfig };
+
 export function loadConfig() {
   try {
     const raw = localStorage.getItem(CONFIG_KEY);
     if (!raw) return { ...EMPTY_CONFIG };
-    return { ...EMPTY_CONFIG, ...JSON.parse(raw) };
+    return normalizeConfig(JSON.parse(raw));
   } catch {
     return { ...EMPTY_CONFIG };
   }
@@ -28,18 +84,40 @@ export function loadConfig() {
 
 export function saveConfig(config) {
   try {
-    localStorage.setItem(CONFIG_KEY, JSON.stringify(config));
+    localStorage.setItem(CONFIG_KEY, JSON.stringify(normalizeConfig(config)));
   } catch {
     /* 隐私模式下可能写不进去，忽略 */
   }
 }
 
-export function hasApi(config) {
-  return Boolean(config?.baseUrl && config?.apiKey && config?.chatModel);
+function usableProvider(config, id) {
+  const providers = config?.providers || [];
+  // 先找选中的；它被删掉或没填全时回退到第一个可用的，避免配置悬空
+  return (
+    providers.find((p) => p.id === id && p.baseUrl && p.apiKey) ||
+    providers.find((p) => p.baseUrl && p.apiKey) ||
+    null
+  );
 }
 
-export function visionModelOf(config) {
-  return config?.visionModel?.trim() || config?.chatModel?.trim() || '';
+/** 写作模型最终落点：{ provider, model }；没配好时返回 null。 */
+export function chatTargetOf(config) {
+  const sel = normalizeSelection(config?.chatModel);
+  const provider = usableProvider(config, sel.providerId);
+  if (!provider || !sel.model) return null;
+  return { provider, model: sel.model };
+}
+
+/** 视觉模型最终落点；供应商或模型没选全时回退写作模型。 */
+export function visionTargetOf(config) {
+  const sel = normalizeSelection(config?.visionModel);
+  const provider = usableProvider(config, sel.providerId);
+  if (provider && sel.model) return { provider, model: sel.model };
+  return chatTargetOf(config);
+}
+
+export function hasApi(config) {
+  return Boolean(chatTargetOf(config));
 }
 
 export async function checkServer() {
@@ -144,14 +222,14 @@ async function encodeDataUrl(url, { maxSide, type, quality }) {
   return encoded;
 }
 
-async function fitDataUrl(url) {
+async function fitDataUrl(url, budget = IMAGE_BUDGET_BYTES) {
   if (typeof url !== 'string' || !url.startsWith('data:image/')) return url;
-  if (dataUrlBytes(url) <= IMAGE_BUDGET_BYTES) return url;
+  if (dataUrlBytes(url) <= budget) return url;
   let smallest = url;
   for (const step of ENCODE_STEPS) {
     try {
       const encoded = await encodeDataUrl(url, step);
-      if (dataUrlBytes(encoded) <= IMAGE_BUDGET_BYTES) return encoded;
+      if (dataUrlBytes(encoded) <= budget) return encoded;
       if (dataUrlBytes(encoded) < dataUrlBytes(smallest)) smallest = encoded;
     } catch {
       continue;
@@ -172,22 +250,40 @@ async function fitImages(messages) {
   }));
 }
 
+// 写作带图：帧可能有很多张，整包要过代理的 4.5MB 上限，
+// 按张数分摊总预算（每张至少留 180KB），交给 chat() 里的 fitImages 兜底。
+const STORY_IMAGE_TOTAL_BYTES = 2.5 * 1024 * 1024;
+
+export async function fitStoryImages(urls) {
+  const list = (Array.isArray(urls) ? urls : []).filter(
+    (u) => typeof u === 'string' && u.startsWith('data:image/')
+  );
+  if (!list.length) return [];
+  const budget = Math.max(180 * 1024, Math.floor(STORY_IMAGE_TOTAL_BYTES / list.length));
+  return Promise.all(list.map((url) => fitDataUrl(url, budget)));
+}
+
 /**
  * 调用 OpenAI 兼容的 /chat/completions。
- * 流式时通过 onDelta 增量回调，返回完整文本。
+ * provider 缺省时取写作模型配置的供应商；流式时通过 onDelta 增量回调，返回完整文本。
  */
 export async function chat({
   config,
-  messages,
+  provider,
   model,
+  messages,
   stream = false,
   onDelta,
   signal,
   temperature = 0.7,
   maxTokens,
 }) {
-  if (!config?.baseUrl) throw new AppError('还没有填接口地址。点右上角「设置」。');
-  if (!config?.apiKey) throw new AppError('还没有填 API Key。点右上角「设置」。');
+  const target =
+    provider && provider.baseUrl && provider.apiKey
+      ? provider
+      : chatTargetOf(config)?.provider;
+  if (!target?.baseUrl) throw new AppError('还没有配置供应商。点右上角「设置」。');
+  if (!target?.apiKey) throw new AppError('这个供应商还没填 API Key。点右上角「设置」。');
   if (!model) throw new AppError('还没有填模型名称。点右上角「设置」。');
 
   const body = { model, messages: await fitImages(messages), temperature };
@@ -199,7 +295,7 @@ export async function chat({
     res = await fetch('/api/proxy', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ baseUrl: config.baseUrl, apiKey: config.apiKey, body, stream }),
+      body: JSON.stringify({ baseUrl: target.baseUrl, apiKey: target.apiKey, body, stream }),
       signal,
     });
   } catch (err) {
@@ -271,9 +367,12 @@ async function readStream(res, onDelta) {
 }
 
 export async function testConnection(config) {
+  const target = chatTargetOf(config);
+  if (!target) throw new AppError('先选一个供应商并填好它的接口地址、API Key，再填写作模型。');
   const reply = await chat({
     config,
-    model: config.chatModel,
+    provider: target.provider,
+    model: target.model,
     messages: [{ role: 'user', content: '只回复两个字：可用' }],
     temperature: 0,
     maxTokens: 12,

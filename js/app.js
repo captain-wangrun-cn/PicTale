@@ -3,12 +3,15 @@
 import {
   AppError,
   chat,
+  chatTargetOf,
   checkServer,
+  fitStoryImages,
   hasApi,
   loadConfig,
+  providerId,
   saveConfig,
   testConnection,
-  visionModelOf,
+  visionTargetOf,
 } from './api.js';
 import { escapeHtml, mdToHtml } from './markdown.js';
 import {
@@ -166,10 +169,13 @@ const els = {
   settingsBtn: $('#settingsBtn'),
   settings: $('#settings'),
   settingsForm: $('#settingsForm'),
-  cfgBase: $('#cfgBase'),
-  cfgKey: $('#cfgKey'),
+  cfgProviders: $('#cfgProviders'),
+  cfgAddProvider: $('#cfgAddProvider'),
+  cfgChatProvider: $('#cfgChatProvider'),
+  cfgVisionProvider: $('#cfgVisionProvider'),
   cfgChat: $('#cfgChat'),
   cfgVision: $('#cfgVision'),
+  cfgStoryImages: $('#cfgStoryImages'),
   testBtn: $('#testBtn'),
   testStatus: $('#testStatus'),
   cancelCfg: $('#cancelCfg'),
@@ -979,7 +985,9 @@ function renderConn() {
     els.connText.textContent = '服务未连接';
     els.connBtn.title = '请运行 node server.mjs';
   } else if (ready) {
-    els.connText.textContent = `${state.config.chatModel} · 已配置`;
+    const target = chatTargetOf(state.config);
+    const vendor = target.provider.name ? `${target.provider.name} · ` : '';
+    els.connText.textContent = `${vendor}${target.model} · 已配置`;
     els.connBtn.title = '已配置，点击修改';
   } else {
     els.connText.textContent = '未连接';
@@ -1217,7 +1225,8 @@ async function extractFrame(frame, { quiet = false } = {}) {
     });
     const text = await chat({
       config: state.config,
-      model: visionModelOf(state.config),
+      provider: visionTargetOf(state.config).provider,
+      model: visionTargetOf(state.config).model,
       messages,
       temperature: 0.25,
       maxTokens: 3200,
@@ -1255,7 +1264,8 @@ async function supplementFrame(frame) {
     });
     const text = await chat({
       config: state.config,
-      model: visionModelOf(state.config),
+      provider: visionTargetOf(state.config).provider,
+      model: visionTargetOf(state.config).model,
       messages,
       temperature: 0.35,
       maxTokens: 2000,
@@ -1355,7 +1365,8 @@ async function findContinuity() {
   try {
     const text = await chat({
       config: state.config,
-      model: state.config.chatModel,
+      provider: chatTargetOf(state.config).provider,
+      model: chatTargetOf(state.config).model,
       messages: continuityMessages({ frames: payload }),
       temperature: 0.3,
       maxTokens: 800,
@@ -1417,7 +1428,11 @@ async function generateStory() {
 
   const settings = normalizeSettings(state.settings);
   const { mode } = settings;
-  const messages = storyMessages({ brief: buildBrief(state.frames), ...settings });
+  const target = chatTargetOf(state.config);
+  const images = state.config.storyImages
+    ? await fitStoryImages(state.frames.map((f) => f.dataUrl))
+    : [];
+  const messages = storyMessages({ brief: buildBrief(state.frames), images, ...settings });
   const controller = new AbortController();
   ui.genAbort = controller;
 
@@ -1429,7 +1444,8 @@ async function generateStory() {
   try {
     const text = await chat({
       config: state.config,
-      model: state.config.chatModel,
+      provider: target.provider,
+      model: target.model,
       messages,
       temperature: mode === 'faithful' ? 0.55 : mode === 'free' ? 0.95 : 0.8,
       stream: true,
@@ -1494,9 +1510,14 @@ async function rewriteSection(index, btn) {
   const settings = normalizeSettings(state.settings);
 
   try {
+    const target = chatTargetOf(state.config);
+    const images = state.config.storyImages && frame
+      ? await fitStoryImages([frame.dataUrl])
+      : [];
     const text = await chat({
       config: state.config,
-      model: state.config.chatModel,
+      provider: target.provider,
+      model: target.model,
       messages: rewriteMessages({
         frameKey: sec.frame || sec.heading || 'F01',
         target: sec.text,
@@ -1505,6 +1526,7 @@ async function rewriteSection(index, btn) {
         note: '',
         storyContext: buildStoryContext(parsed) + '\n\n' + buildTimeline(state.frames),
         frameBrief: frame ? buildFrameBrief(frame, frameIndex) : '',
+        images,
         isLast: index === parsed.sections.length - 1,
         ...settings,
       }),
@@ -1536,29 +1558,105 @@ async function rewriteSection(index, btn) {
 /* settings                                                            */
 /* ------------------------------------------------------------------ */
 
+function providerRowHtml(p) {
+  return `
+    <div class="provider-row" data-id="${escapeHtml(p.id)}">
+      <div class="provider-row-head">
+        <input class="pr-name" type="text" maxlength="30" autocomplete="off" spellcheck="false"
+               placeholder="名称（如 OpenAI）" value="${escapeHtml(p.name)}" aria-label="供应商名称">
+        <button class="pr-del link-btn" type="button" title="删除这个供应商">删除</button>
+      </div>
+      <input class="pr-base" type="url" autocomplete="off" spellcheck="false"
+             placeholder="接口地址，如 https://api.openai.com/v1" value="${escapeHtml(p.baseUrl)}" aria-label="接口地址">
+      <input class="pr-key" type="password" autocomplete="off" spellcheck="false"
+             placeholder="API Key（sk-…）" value="${escapeHtml(p.apiKey)}" aria-label="API Key">
+      <em>填到 <code>/v1</code> 为止即可，会自动补上 <code>/chat/completions</code>。</em>
+    </div>`;
+}
+
+function rebuildProviderOptions({ chatId, visionId } = {}) {
+  const rows = $$('.provider-row', els.cfgProviders);
+  const options = rows.map((row, i) => {
+    const name = $('.pr-name', row).value.trim();
+    let host = '';
+    try {
+      host = new URL($('.pr-base', row).value.trim()).hostname;
+    } catch {
+      host = '';
+    }
+    const label = name || host || `供应商 ${i + 1}`;
+    return `<option value="${escapeHtml(row.dataset.id)}">${escapeHtml(label)}</option>`;
+  }).join('');
+
+  const prevChat = chatId ?? els.cfgChatProvider.value;
+  const prevVision = visionId ?? els.cfgVisionProvider.value;
+  els.cfgChatProvider.innerHTML = options || '<option value="">（先添加供应商）</option>';
+  els.cfgVisionProvider.innerHTML = '<option value="">同写作模型</option>' + options;
+
+  const ids = rows.map((r) => r.dataset.id);
+  els.cfgChatProvider.value = ids.includes(prevChat) ? prevChat : ids[0] || '';
+  els.cfgVisionProvider.value = ids.includes(prevVision) ? prevVision : '';
+}
+
 function openSettings() {
-  els.cfgBase.value = state.config.baseUrl || '';
-  els.cfgKey.value = state.config.apiKey || '';
-  els.cfgChat.value = state.config.chatModel || '';
-  els.cfgVision.value = state.config.visionModel || '';
+  els.cfgProviders.innerHTML = state.config.providers.map(providerRowHtml).join('');
+  rebuildProviderOptions({
+    chatId: state.config.chatModel.providerId,
+    visionId: state.config.visionModel.providerId,
+  });
+  els.cfgChat.value = state.config.chatModel.model || '';
+  els.cfgVision.value = state.config.visionModel.model || '';
+  els.cfgStoryImages.checked = Boolean(state.config.storyImages);
   els.testStatus.textContent = '';
   els.testStatus.className = 'sstatus';
   if (typeof els.settings.showModal === 'function') els.settings.showModal();
 }
 
 function readConfigForm() {
+  const providers = $$('.provider-row', els.cfgProviders).map((row, i) => {
+    const name = $('.pr-name', row).value.trim();
+    let host = '';
+    try {
+      host = new URL($('.pr-base', row).value.trim()).hostname;
+    } catch {
+      host = '';
+    }
+    return {
+      id: row.dataset.id,
+      name: name || host || `供应商 ${i + 1}`,
+      baseUrl: $('.pr-base', row).value.trim(),
+      apiKey: $('.pr-key', row).value.trim(),
+    };
+  });
   return {
-    baseUrl: els.cfgBase.value.trim(),
-    apiKey: els.cfgKey.value.trim(),
-    chatModel: els.cfgChat.value.trim(),
-    visionModel: els.cfgVision.value.trim(),
+    providers,
+    chatModel: {
+      providerId: els.cfgChatProvider.value,
+      model: els.cfgChat.value.trim(),
+    },
+    visionModel: {
+      providerId: els.cfgVisionProvider.value,
+      model: els.cfgVision.value.trim(),
+    },
+    storyImages: els.cfgStoryImages.checked,
   };
 }
 
 async function runTest() {
   const cfg = readConfigForm();
-  if (!cfg.baseUrl || !cfg.apiKey || !cfg.chatModel) {
-    els.testStatus.textContent = '接口地址、API Key、写作模型都要填。';
+  const selected = cfg.providers.find((p) => p.id === cfg.chatModel.providerId);
+  if (!cfg.providers.some((p) => p.baseUrl && p.apiKey)) {
+    els.testStatus.textContent = '至少要有一个供应商填好接口地址和 API Key。';
+    els.testStatus.className = 'sstatus is-err';
+    return;
+  }
+  if (!selected?.baseUrl || !selected?.apiKey) {
+    els.testStatus.textContent = '写作模型选的供应商还没填好接口地址和 API Key。';
+    els.testStatus.className = 'sstatus is-err';
+    return;
+  }
+  if (!cfg.chatModel.model) {
+    els.testStatus.textContent = '写作模型的模型名要填。';
     els.testStatus.className = 'sstatus is-err';
     return;
   }
@@ -2491,6 +2589,18 @@ function bindEvents() {
   });
   els.cancelCfg.addEventListener('click', () => els.settings.close());
   els.testBtn.addEventListener('click', runTest);
+  els.cfgAddProvider.addEventListener('click', () => {
+    els.cfgProviders.insertAdjacentHTML('beforeend', providerRowHtml({ id: providerId() }));
+    rebuildProviderOptions();
+  });
+  els.cfgProviders.addEventListener('click', (e) => {
+    const btn = e.target.closest('.pr-del');
+    if (!btn) return;
+    btn.closest('.provider-row').remove();
+    rebuildProviderOptions();
+  });
+  // 名称/地址改动时刷新下拉里的供应商显示名
+  els.cfgProviders.addEventListener('input', () => rebuildProviderOptions());
 
   els.settingsForm.addEventListener('submit', (e) => {
     e.preventDefault();

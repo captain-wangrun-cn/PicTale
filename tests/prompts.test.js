@@ -221,3 +221,49 @@ test('识别请求包含连续故事规则且不混入自定义创作 prompt', (
   });
   assert.ok(!withSettings.map((m) => JSON.stringify(m)).join('\n').includes(custom));
 });
+
+test('storyMessages 不传图时用户消息保持纯文本', () => {
+  const messages = storyMessages({ brief: '【简报】', mode: 'faithful' });
+  assert.equal(messages.length, 2);
+  assert.equal(typeof messages[1].content, 'string');
+  assert.ok(messages[1].content.includes('【简报】'));
+  assert.ok(!JSON.stringify(messages).includes('image_url'));
+});
+
+test('storyMessages 传图时按顺序附加原图并说明用途', () => {
+  const images = [
+    'data:image/jpeg;base64,AAAA',
+    'data:image/jpeg;base64,BBBB',
+  ];
+  const messages = storyMessages({ brief: '【简报】', images, mode: 'faithful' });
+  const content = messages[1].content;
+  assert.ok(Array.isArray(content));
+  assert.equal(content[0].type, 'text');
+  assert.ok(content[0].text.includes('F01、F02'));
+  assert.equal(content.length, 3);
+  assert.equal(content[1].image_url.url, images[0]);
+  assert.equal(content[2].image_url.url, images[1]);
+});
+
+test('rewriteMessages 传图时附上该帧原图；不传时保持纯文本', () => {
+  const base = {
+    frameKey: 'F02',
+    target: '第二段正文',
+    before: '第一段结尾',
+    after: '',
+    note: '',
+    storyContext: '整体',
+    frameBrief: '画面依据',
+  };
+  const plain = rewriteMessages(base);
+  assert.equal(typeof plain[1].content, 'string');
+
+  const withImg = rewriteMessages({
+    ...base,
+    images: ['data:image/png;base64,CCCC'],
+  });
+  const content = withImg[1].content;
+  assert.ok(Array.isArray(content));
+  assert.ok(content[0].text.includes('末尾附有这一帧的原图'));
+  assert.equal(content[1].image_url.url, 'data:image/png;base64,CCCC');
+});

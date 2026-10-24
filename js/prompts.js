@@ -229,12 +229,31 @@ ${list}
   ];
 }
 
-export function storyMessages({ brief, ...settings }) {
+const IMAGE_NOTE =
+  '本条消息末尾按 F01、F02… 的顺序附上了各帧原图，可与清单对照核实画面；仍以细节清单为画面依据，原图与清单冲突时以清单为准。';
+
+/** 把纯文本用户消息变成 文本 + 图片 的多段 content；没有图时保持字符串。 */
+function withImages(text, images) {
+  const list = (Array.isArray(images) ? images : []).filter(
+    (u) => typeof u === 'string' && u.startsWith('data:image/')
+  );
+  if (!list.length) return text;
+  return [
+    { type: 'text', text },
+    ...list.map((url) => ({ type: 'image_url', image_url: { url } })),
+  ];
+}
+
+export function storyMessages({ brief, images, ...settings }) {
   const rules = writingRules(settings);
+  const text =
+    `${brief}\n\n【写作要求】\n${rules}\n\n` +
+    (Array.isArray(images) && images.length ? `${IMAGE_NOTE}\n\n` : '') +
+    '请从 F01 开始写。每段正文都要有至少一处 **加粗** 的关键句，对话用中文引号。';
 
   return [
     { role: 'system', content: STORY_SYSTEM },
-    { role: 'user', content: `${brief}\n\n【写作要求】\n${rules}\n\n请从 F01 开始写。每段正文都要有至少一处 **加粗** 的关键句，对话用中文引号。` },
+    { role: 'user', content: withImages(text, images) },
   ];
 }
 
@@ -246,6 +265,7 @@ export function rewriteMessages({
   note,
   storyContext,
   frameBrief,
+  images,
   isLast = false,
   ...settings
 }) {
@@ -267,11 +287,14 @@ export function rewriteMessages({
     after ? `【下一段开头】\n${after}` : '',
     note ? `【用户要求】${note}` : '',
     `【写作要求】\n${rules}`,
+    Array.isArray(images) && images.length
+      ? '本条消息末尾附有这一帧的原图，可对照原图核实画面细节，仍以细节清单为准。'
+      : '',
   ];
 
   return [
     { role: 'system', content: system },
-    { role: 'user', content: parts.filter(Boolean).join('\n\n') },
+    { role: 'user', content: withImages(parts.filter(Boolean).join('\n\n'), images) },
   ];
 }
 
